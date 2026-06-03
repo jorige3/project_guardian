@@ -3,6 +3,9 @@ from analyzers.code_review import CodeReviewAnalyzer
 from services.report_writer import ReportWriter
 from analyzers.security_review import SecurityReviewAnalyzer
 from analyzers.performance_review import PerformanceReviewAnalyzer
+from analyzers.ml_review import MLReviewAnalyzer
+from analyzers.architecture_review import ArchitectureReviewAnalyzer
+from models.finding import Finding
 
 class ProjectGuardian:
 
@@ -13,7 +16,9 @@ class ProjectGuardian:
         self.analyzers = [
             CodeReviewAnalyzer(),
             SecurityReviewAnalyzer(),
+            ArchitectureReviewAnalyzer(),
             PerformanceReviewAnalyzer(),
+            MLReviewAnalyzer(),
         ]
 
     def run(self):
