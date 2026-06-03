@@ -2,6 +2,7 @@ from services.file_scanner import FileScanner
 from analyzers.code_review import CodeReviewAnalyzer
 from services.report_writer import ReportWriter
 from analyzers.security_review import SecurityReviewAnalyzer
+from analyzers.performance_review import PerformanceReviewAnalyzer
 
 class ProjectGuardian:
 
@@ -12,6 +13,7 @@ class ProjectGuardian:
         self.analyzers = [
             CodeReviewAnalyzer(),
             SecurityReviewAnalyzer(),
+            PerformanceReviewAnalyzer(),
         ]
 
     def run(self):

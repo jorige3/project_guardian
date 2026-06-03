@@ -3,9 +3,12 @@ from pathlib import Path
 
 class ReportWriter:
 
-    def write(self, findings, output_file):
+    def write(self, findings, output_path):
 
-        output_path = Path(output_file)
+        Path(output_path).parent.mkdir(
+            parents=True,
+            exist_ok=True
+        )
 
         with open(output_path, "w", encoding="utf-8") as f:
 
