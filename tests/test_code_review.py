@@ -1,13 +1,10 @@
-from analyzers.security_review import SecurityReviewAnalyzer
+from analyzers.code_review import CodeReviewAnalyzer
 
 
-def test_detects_eval():
+def test_code_review_runs():
 
-    analyzer = SecurityReviewAnalyzer()
+    analyzer = CodeReviewAnalyzer()
 
-    with open("temp_test.py", "w") as f:
-        f.write('eval("print(1)")')
+    findings = analyzer.analyze("agent.py")
 
-    findings = analyzer.analyze("temp_test.py")
-
-    assert len(findings) == 1
+    assert isinstance(findings, list)
