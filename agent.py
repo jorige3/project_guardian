@@ -1,7 +1,7 @@
 from services.file_scanner import FileScanner
 from analyzers.code_review import CodeReviewAnalyzer
 from services.report_writer import ReportWriter
-
+from analyzers.security_review import SecurityReviewAnalyzer
 
 class ProjectGuardian:
 
@@ -11,6 +11,7 @@ class ProjectGuardian:
 
         self.analyzers = [
             CodeReviewAnalyzer(),
+            SecurityReviewAnalyzer(),
         ]
 
     def run(self):
@@ -28,6 +29,8 @@ class ProjectGuardian:
                 )
 
         return findings
+
+
 
 
 if __name__ == "__main__":
@@ -49,3 +52,6 @@ if __name__ == "__main__":
     )
 
     print("Report generated: reports/project_audit.md")
+    
+    
+    
