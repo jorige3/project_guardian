@@ -3,39 +3,42 @@ from services.report_writer import ReportWriter
 from analyzers.security_review import SecurityReviewAnalyzer
 from analyzers.ml_review import MLReviewAnalyzer
 from analyzers.line_length import LineLengthAnalyzer
-from models.finding import Finding
 from analyzers.dependency_review import DependencyReviewAnalyzer
 
 
 class ProjectGuardian:
 
-    def __init__(self, project_path="."):
+    def __init__(self, project_path=".", scanner=None, analyzers=None, report_writer=None):
         self.project_path = project_path
-        self.scanner = FileScanner(project_path)
+        self.scanner = scanner if scanner is not None else FileScanner(project_path)
+        self.report_writer = report_writer if report_writer is not None else ReportWriter()
 
-        self.analyzers = [
-            LineLengthAnalyzer(
-                name="CodeReview",
-                threshold=300,
-                severity="LOW",
-                message="File exceeds 300 lines"
-            ),
-            SecurityReviewAnalyzer(),
-            LineLengthAnalyzer(
-                name="ArchitectureReview",
-                threshold=500,
-                severity="MEDIUM",
-                message="Large file detected (>500 lines)"
-            ),
-            LineLengthAnalyzer(
-                name="PerformanceReview",
-                threshold=300,
-                severity="MEDIUM",
-                message="Large file may impact maintainability"
-            ),
-            MLReviewAnalyzer(),
-            DependencyReviewAnalyzer(),
-        ]
+        if analyzers is not None:
+            self.analyzers = analyzers
+        else:
+            self.analyzers = [
+                LineLengthAnalyzer(
+                    name="CodeReview",
+                    threshold=300,
+                    severity="LOW",
+                    message="File exceeds 300 lines"
+                ),
+                SecurityReviewAnalyzer(),
+                LineLengthAnalyzer(
+                    name="ArchitectureReview",
+                    threshold=500,
+                    severity="MEDIUM",
+                    message="Large file detected (>500 lines)"
+                ),
+                LineLengthAnalyzer(
+                    name="PerformanceReview",
+                    threshold=300,
+                    severity="MEDIUM",
+                    message="Large file may impact maintainability"
+                ),
+                MLReviewAnalyzer(),
+                DependencyReviewAnalyzer(),
+            ]
 
     def run(self):
 
@@ -67,9 +70,7 @@ if __name__ == "__main__":
     for finding in results:
         print(finding)
 
-    writer = ReportWriter()
-
-    writer.write(
+    guardian.report_writer.write(
         results,
         "reports/project_audit.md"
     )
