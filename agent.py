@@ -4,6 +4,8 @@ from analyzers.security_review import SecurityReviewAnalyzer
 from analyzers.ml_review import MLReviewAnalyzer
 from analyzers.line_length import LineLengthAnalyzer
 from models.finding import Finding
+from analyzers.dependency_review import DependencyReviewAnalyzer
+
 
 class ProjectGuardian:
 
@@ -32,6 +34,7 @@ class ProjectGuardian:
                 message="Large file may impact maintainability"
             ),
             MLReviewAnalyzer(),
+            DependencyReviewAnalyzer(),
         ]
 
     def run(self):
