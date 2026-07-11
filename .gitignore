@@ -29,3 +29,4 @@ Thumbs.db
 
 temp_test.py
 .pytest_cache/
+temp_*.py
