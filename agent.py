@@ -1,10 +1,8 @@
 from services.file_scanner import FileScanner
-from analyzers.code_review import CodeReviewAnalyzer
 from services.report_writer import ReportWriter
 from analyzers.security_review import SecurityReviewAnalyzer
-from analyzers.performance_review import PerformanceReviewAnalyzer
 from analyzers.ml_review import MLReviewAnalyzer
-from analyzers.architecture_review import ArchitectureReviewAnalyzer
+from analyzers.line_length import LineLengthAnalyzer
 from models.finding import Finding
 
 class ProjectGuardian:
@@ -14,10 +12,25 @@ class ProjectGuardian:
         self.scanner = FileScanner(project_path)
 
         self.analyzers = [
-            CodeReviewAnalyzer(),
+            LineLengthAnalyzer(
+                name="CodeReview",
+                threshold=300,
+                severity="LOW",
+                message="File exceeds 300 lines"
+            ),
             SecurityReviewAnalyzer(),
-            ArchitectureReviewAnalyzer(),
-            PerformanceReviewAnalyzer(),
+            LineLengthAnalyzer(
+                name="ArchitectureReview",
+                threshold=500,
+                severity="MEDIUM",
+                message="Large file detected (>500 lines)"
+            ),
+            LineLengthAnalyzer(
+                name="PerformanceReview",
+                threshold=300,
+                severity="MEDIUM",
+                message="Large file may impact maintainability"
+            ),
             MLReviewAnalyzer(),
         ]
 
