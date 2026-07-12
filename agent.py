@@ -1,6 +1,8 @@
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from services.file_scanner import FileScanner
 from services.report_writer import ReportWriter
+from services.config_manager import load_config_file, Config
 from analyzers.security_review import SecurityReviewAnalyzer
 from analyzers.ml_review import MLReviewAnalyzer
 from analyzers.line_length import LineLengthAnalyzer
@@ -9,44 +11,75 @@ from analyzers.dependency_review import DependencyReviewAnalyzer
 
 class ProjectGuardian:
 
-    def __init__(self, project_path=".", scanner=None, analyzers=None, report_writer=None, max_workers=1):
-        self.project_path = project_path
-        self.scanner = scanner if scanner is not None else FileScanner(project_path)
-        self.report_writer = report_writer if report_writer is not None else ReportWriter()
+    def __init__(self, project_path=".", scanner=None, analyzers=None, report_writer=None, max_workers=None, config=None):
+        self.project_path = Path(project_path)
 
-        # Normalize worker count: default to 1 (sequential) as the safe default.
-        # Values less than 1 are normalized to 1 to prevent invalid executor sizes.
-        if max_workers is not None and max_workers < 1:
-            self.max_workers = 1
+        # Config loading: priority is injected config -> file loading -> defaults
+        if config is not None:
+            self.config = config
         else:
-            self.max_workers = max_workers
+            self.config = load_config_file(self.project_path / "guardian.json")
 
+        # Resolve scanner with config priorities
+        if scanner is not None:
+            self.scanner = scanner
+        else:
+            self.scanner = FileScanner(
+                str(self.project_path),
+                exclude_dirs=self.config.exclude_dirs,
+                exclude_patterns=self.config.exclude_patterns
+            )
+
+        # Resolve report_writer and report_path
+        self.report_writer = report_writer if report_writer is not None else ReportWriter()
+        self.report_path = self.config.report_path
+
+        # Resolve max_workers priority: Constructor parameter -> Config -> default
+        if max_workers is not None:
+            self.max_workers = max_workers
+        else:
+            self.max_workers = self.config.max_workers
+
+        # Normalize max_workers count
+        if self.max_workers is not None and self.max_workers < 1:
+            self.max_workers = 1
+
+        # Resolve analyzers
         if analyzers is not None:
             self.analyzers = analyzers
         else:
-            self.analyzers = [
-                LineLengthAnalyzer(
-                    name="CodeReview",
-                    threshold=300,
-                    severity="LOW",
-                    message="File exceeds 300 lines"
-                ),
-                SecurityReviewAnalyzer(),
-                LineLengthAnalyzer(
-                    name="ArchitectureReview",
-                    threshold=500,
-                    severity="MEDIUM",
-                    message="Large file detected (>500 lines)"
-                ),
-                LineLengthAnalyzer(
-                    name="PerformanceReview",
-                    threshold=300,
-                    severity="MEDIUM",
-                    message="Large file may impact maintainability"
-                ),
-                MLReviewAnalyzer(),
-                DependencyReviewAnalyzer(),
-            ]
+            self.analyzers = []
+            for name, cfg in self.config.analyzers.items():
+                if not cfg.get("enabled", True):
+                    continue
+
+                if name == "CodeReview":
+                    self.analyzers.append(LineLengthAnalyzer(
+                        name="CodeReview",
+                        threshold=cfg["threshold"],
+                        severity="LOW",
+                        message="File exceeds 300 lines"
+                    ))
+                elif name == "ArchitectureReview":
+                    self.analyzers.append(LineLengthAnalyzer(
+                        name="ArchitectureReview",
+                        threshold=cfg["threshold"],
+                        severity="MEDIUM",
+                        message="Large file detected (>500 lines)"
+                    ))
+                elif name == "PerformanceReview":
+                    self.analyzers.append(LineLengthAnalyzer(
+                        name="PerformanceReview",
+                        threshold=cfg["threshold"],
+                        severity="MEDIUM",
+                        message="Large file may impact maintainability"
+                    ))
+                elif name == "SecurityReview":
+                    self.analyzers.append(SecurityReviewAnalyzer())
+                elif name == "MLReview":
+                    self.analyzers.append(MLReviewAnalyzer())
+                elif name == "DependencyReview":
+                    self.analyzers.append(DependencyReviewAnalyzer())
 
     def run(self):
         import ast
@@ -148,3 +181,6 @@ if __name__ == "__main__":
 
     for finding in results:
         print(finding)
+
+    guardian.report_writer.write(results, guardian.report_path)
+    print(f"Report generated: {guardian.report_path}")
