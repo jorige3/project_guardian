@@ -1,3 +1,5 @@
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 from agent import ProjectGuardian
 from services.file_scanner import FileScanner
 from services.report_writer import ReportWriter
@@ -123,3 +125,38 @@ def test_analyzer_execution_order():
 
     # Verify execution order is exactly as supplied: analyzer1, then analyzer2, then analyzer3
     assert execution_log == ["first", "second", "third"]
+
+
+def test_run_with_valid_file(tmp_path):
+    test_file = tmp_path / "valid_code.py"
+    test_file.write_text("x = 1\ny = 2\n")
+
+    fake_scanner = FakeScanner([str(test_file)])
+    guardian = ProjectGuardian(scanner=fake_scanner)
+    findings = guardian.run()
+    # No findings expected on simple valid assignment code
+    assert len(findings) == 0
+
+
+def test_run_with_invalid_file(tmp_path):
+    test_file = tmp_path / "invalid_code.py"
+    test_file.write_text("if True x = 1\n") # SyntaxError
+
+    fake_scanner = FakeScanner([str(test_file)])
+    guardian = ProjectGuardian(scanner=fake_scanner)
+    findings = guardian.run()
+    assert len(findings) == 0
+
+
+def test_analyzer_signature_inspection_error():
+    fake_scanner = FakeScanner(["target.py"])
+    bad_analyzer = MagicMock()
+
+    # Mock inspect.signature to raise ValueError
+    with patch("inspect.signature", side_effect=ValueError("Invalid signature")):
+        guardian = ProjectGuardian(
+            scanner=fake_scanner,
+            analyzers=[bad_analyzer]
+        )
+        findings = guardian.run()
+    assert len(findings) == 0

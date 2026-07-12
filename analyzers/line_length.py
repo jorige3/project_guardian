@@ -10,14 +10,15 @@ class LineLengthAnalyzer(BaseAnalyzer):
         self.severity = severity
         self.message = message
 
-    def analyze(self, file_path: str) -> list:
+    def analyze(self, file_path: str, content: str = None, lines: list = None, ast_tree=None) -> list:
         findings = []
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-        except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
-            print(f"Warning: Skipped line length analysis for {file_path} due to: {e}")
-            return []
+        if lines is None:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+                print(f"Warning: Skipped line length analysis for {file_path} due to: {e}")
+                return []
 
         if len(lines) > self.threshold:
             findings.append(
