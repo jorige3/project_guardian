@@ -12,22 +12,26 @@ class SecurityReviewAnalyzer(BaseAnalyzer):
         "pickle.loads",
     ]
 
-    def analyze(self, file_path):
+    def analyze(self, file_path, content=None, lines=None, ast_tree=None):
         
         if file_path.endswith("security_review.py"):
             return []
 
         findings = []
 
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
-            print(f"Warning: Skipped security analysis for {file_path} due to: {e}")
-            return []
+        if content is None:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+                print(f"Warning: Skipped security analysis for {file_path} due to: {e}")
+                return []
 
         try:
-            tree = ast.parse(content)
+            if ast_tree is not None:
+                tree = ast_tree
+            else:
+                tree = ast.parse(content)
             detected = set()
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call):

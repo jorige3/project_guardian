@@ -6,19 +6,23 @@ from models.finding import Finding
 
 class MLReviewAnalyzer(BaseAnalyzer):
 
-    def analyze(self, file_path):
+    def analyze(self, file_path, content=None, lines=None, ast_tree=None):
 
         findings = []
 
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
-            print(f"Warning: Skipped ML analysis for {file_path} due to: {e}")
-            return []
+        if content is None:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+                print(f"Warning: Skipped ML analysis for {file_path} due to: {e}")
+                return []
 
         try:
-            tree = ast.parse(content)
+            if ast_tree is not None:
+                tree = ast_tree
+            else:
+                tree = ast.parse(content)
             has_sklearn = False
             has_train_test_split = False
 

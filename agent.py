@@ -41,18 +41,57 @@ class ProjectGuardian:
             ]
 
     def run(self):
+        import ast
+        import inspect
 
         findings = []
 
         python_files = self.scanner.get_python_files()
 
+        # Check signature once per analyzer to ensure backward compatibility
+        analyzer_signatures = {}
+        for analyzer in self.analyzers:
+            try:
+                sig = inspect.signature(analyzer.analyze)
+                has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+                supports_di = "content" in sig.parameters or has_kwargs
+            except (AttributeError, ValueError):
+                supports_di = False
+            analyzer_signatures[analyzer] = supports_di
+
         for file_path in python_files:
+            file_str = str(file_path)
+            content = None
+            lines = None
+            ast_tree = None
+
+            try:
+                with open(file_str, "r", encoding="utf-8") as f:
+                    content = f.read()
+                lines = content.splitlines(keepends=True)
+            except (FileNotFoundError, PermissionError, UnicodeDecodeError):
+                pass
+
+            if content is not None:
+                try:
+                    ast_tree = ast.parse(content)
+                except SyntaxError:
+                    pass
 
             for analyzer in self.analyzers:
-
-                findings.extend(
-                    analyzer.analyze(str(file_path))
-                )
+                if analyzer_signatures.get(analyzer, False):
+                    findings.extend(
+                        analyzer.analyze(
+                            file_str,
+                            content=content,
+                            lines=lines,
+                            ast_tree=ast_tree
+                        )
+                    )
+                else:
+                    findings.extend(
+                        analyzer.analyze(file_str)
+                    )
 
         return findings
 
