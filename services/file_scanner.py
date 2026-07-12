@@ -1,10 +1,11 @@
 import os
+import fnmatch
 from pathlib import Path
 
 
 class FileScanner:
 
-    def __init__(self, root_path: str, exclude_dirs=None):
+    def __init__(self, root_path: str, exclude_dirs=None, exclude_patterns=None):
         self.root_path = Path(root_path)
         if exclude_dirs is not None:
             self.exclude_dirs = set(exclude_dirs)
@@ -13,6 +14,10 @@ class FileScanner:
                 "venv", ".venv", "tests", "__pycache__",
                 ".git", ".pytest_cache", "temp_pytest", "node_modules"
             }
+        if exclude_patterns is not None:
+            self.exclude_patterns = list(exclude_patterns)
+        else:
+            self.exclude_patterns = ["temp_*"]
 
     def get_python_files(self):
         python_files = []
@@ -55,7 +60,14 @@ class FileScanner:
                     except OSError:
                         continue
 
-                    if filename.endswith(".py") and not filename.startswith("temp_"):
+                    # Check if filename matches any ignored file pattern
+                    ignored = False
+                    for pattern in self.exclude_patterns:
+                        if fnmatch.fnmatch(filename, pattern):
+                            ignored = True
+                            break
+
+                    if filename.endswith(".py") and not ignored:
                         python_files.append(file_path)
 
         except OSError as e:
