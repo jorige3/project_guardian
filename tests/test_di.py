@@ -160,3 +160,144 @@ def test_analyzer_signature_inspection_error():
         )
         findings = guardian.run()
     assert len(findings) == 0
+
+
+def test_parallel_concurrency_config():
+    # Verify default constructor is sequential (max_workers=1)
+    g_default = ProjectGuardian()
+    assert g_default.max_workers == 1
+
+    # Verify configurable workers
+    g_custom = ProjectGuardian(max_workers=8)
+    assert g_custom.max_workers == 8
+
+    # Verify normalization of workers less than 1
+    g_zero = ProjectGuardian(max_workers=0)
+    assert g_zero.max_workers == 1
+    g_neg = ProjectGuardian(max_workers=-5)
+    assert g_neg.max_workers == 1
+
+
+def test_parallel_identical_findings(tmp_path):
+    # Setup some python files with line length warnings
+    file1 = tmp_path / "a.py"
+    file1.write_text("x = 1\n" * 350) # triggers LineLength > 300
+
+    file2 = tmp_path / "b.py"
+    file2.write_text("y = 2\n" * 550) # triggers LineLength > 500
+
+    fake_scanner = FakeScanner([str(file1), str(file2)])
+
+    # Run sequentially (max_workers=1)
+    g_seq = ProjectGuardian(scanner=fake_scanner, max_workers=1)
+    findings_seq = g_seq.run()
+
+    # Run in parallel (max_workers=4)
+    g_par = ProjectGuardian(scanner=fake_scanner, max_workers=4)
+    findings_par = g_par.run()
+
+    # Verify exact equality in findings
+    assert len(findings_seq) == len(findings_par)
+    for f_seq, f_par in zip(findings_seq, findings_par):
+        assert f_seq.analyzer == f_par.analyzer
+        assert f_seq.severity == f_par.severity
+        assert f_seq.file_path == f_par.file_path
+        assert f_seq.message == f_par.message
+
+
+def test_parallel_deterministic_ordering(tmp_path):
+    file_c = tmp_path / "c.py"
+    file_c.write_text("x = 1\n" * 350)
+
+    file_a = tmp_path / "a.py"
+    file_a.write_text("x = 1\n" * 350)
+
+    # Scanned order is a.py, then c.py (deterministic alphabetically sorted)
+    fake_scanner = FakeScanner([str(file_a), str(file_c)])
+
+    g_par = ProjectGuardian(scanner=fake_scanner, max_workers=2)
+    findings = g_par.run()
+
+    # Assert findings are ordered alphabetically by file path
+    assert len(findings) == 4 # 2 findings per file (CodeReview and PerformanceReview)
+    assert findings[0].file_path == str(file_a)
+    assert findings[1].file_path == str(file_a)
+    assert findings[2].file_path == str(file_c)
+    assert findings[3].file_path == str(file_c)
+
+
+def test_parallel_worker_exception_isolation(tmp_path):
+    file1 = tmp_path / "a.py"
+    file1.write_text("x = 1\n")
+
+    file2 = tmp_path / "b.py"
+    file2.write_text("y = 2\n")
+
+    fake_scanner = FakeScanner([str(file1), str(file2)])
+
+    # Create an analyzer that raises an exception when analyzing "a.py"
+    class CrashingAnalyzer(BaseAnalyzer):
+        def analyze(self, file_path, content=None, lines=None, ast_tree=None):
+            if "a.py" in file_path:
+                raise RuntimeError("Crashing on a.py")
+            return [Finding("Crashing", "LOW", file_path, "Clean b.py")]
+
+    crashing_analyzer = CrashingAnalyzer()
+
+    # Run parallel
+    guardian = ProjectGuardian(
+        scanner=fake_scanner,
+        analyzers=[crashing_analyzer],
+        max_workers=2
+    )
+
+    # The scan should NOT terminate with exception
+    findings = guardian.run()
+
+    # It should successfully return the finding for b.py
+    assert len(findings) == 1
+    assert findings[0].file_path == str(file2)
+    assert findings[0].message == "Clean b.py"
+
+
+def test_parallel_empty_project():
+    fake_scanner = FakeScanner([])
+    guardian = ProjectGuardian(scanner=fake_scanner, max_workers=4)
+    findings = guardian.run()
+    assert findings == []
+
+
+def test_parallel_single_file(tmp_path):
+    test_file = tmp_path / "single.py"
+    test_file.write_text("x = 1\n" * 350)
+
+    fake_scanner = FakeScanner([str(test_file)])
+    guardian = ProjectGuardian(scanner=fake_scanner, max_workers=2)
+    findings = guardian.run()
+    assert len(findings) == 2
+
+
+def test_parallel_multiple_files(tmp_path):
+    files = []
+    for i in range(5):
+        f = tmp_path / f"file_{i}.py"
+        f.write_text("x = 1\n" * 350)
+        files.append(str(f))
+
+    fake_scanner = FakeScanner(files)
+    guardian = ProjectGuardian(scanner=fake_scanner, max_workers=4)
+    findings = guardian.run()
+    assert len(findings) == 10
+
+
+def test_parallel_large_project_simulation(tmp_path):
+    files = []
+    for i in range(50):
+        f = tmp_path / f"large_{i}.py"
+        f.write_text("x = 1\n")
+        files.append(str(f))
+
+    fake_scanner = FakeScanner(files)
+    guardian = ProjectGuardian(scanner=fake_scanner, max_workers=10)
+    findings = guardian.run()
+    assert findings == []
