@@ -88,6 +88,10 @@ class ProjectGuardian:
         findings = []
 
         python_files = self.scanner.get_python_files()
+        all_files = list(python_files)
+        req_path = self.project_path / "requirements.txt"
+        if req_path.exists():
+            all_files.append(req_path)
 
         # Check signature once per analyzer to ensure backward compatibility
         analyzer_signatures = {}
@@ -129,7 +133,17 @@ class ProjectGuardian:
                     except SyntaxError:
                         pass
 
+                is_requirements = Path(file_path).name == "requirements.txt"
                 for analyzer in self.analyzers:
+                    if is_requirements:
+                        # Invoke only DependencyReviewAnalyzer on requirements.txt
+                        if getattr(analyzer, "name", None) != "DependencyReview":
+                            continue
+                    else:
+                        # Do not invoke DependencyReviewAnalyzer on Python files
+                        if getattr(analyzer, "name", None) == "DependencyReview":
+                            continue
+
                     if analyzer_signatures.get(analyzer, False):
                         file_findings.extend(
                             analyzer.analyze(
@@ -155,10 +169,10 @@ class ProjectGuardian:
         # and thread pool management overhead. Parallel mode (ThreadPoolExecutor) is beneficial
         # primarily for disk-bound scans where files are read from slow, uncached, or network storage.
         if self.max_workers == 1:
-            results = [analyze_single_file(f) for f in python_files]
+            results = [analyze_single_file(f) for f in all_files]
         else:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                results = list(executor.map(analyze_single_file, python_files))
+                results = list(executor.map(analyze_single_file, all_files))
 
         # Deterministic sorting: threads complete out-of-order, so we explicitly sort
         # the gathered file results alphabetically by file path to keep order identical.
