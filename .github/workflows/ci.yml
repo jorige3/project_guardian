@@ -2,29 +2,53 @@ name: CI
 
 on:
   push:
+    branches: [ main, feature/** ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   test:
-
+    name: Lint, Type Check & Test
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Sync dependencies
+        run: uv sync --dev
 
-        run: |
-          python -m pip install --upgrade pip
+      - name: Run Ruff Linter
+        run: uv run ruff check .
 
-          pip install pytest
+      - name: Run Ruff Formatter Check
+        run: uv run ruff format --check .
 
-      - name: Run tests
-        run: pytest
+      - name: Run Pytest Suite
+        run: uv run pytest
+
+      - name: Verify CLI Version Command
+        run: uv run project-guardian --version
+
+      - name: Verify CLI Doctor Command
+        run: uv run project-guardian doctor
+
+  docker-validation:
+    name: Docker Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t project-guardian:ci .
+
+      - name: Validate Docker Run Command
+        run: docker run --rm project-guardian:ci

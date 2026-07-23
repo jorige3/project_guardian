@@ -3,7 +3,6 @@ from models.finding import Finding
 
 
 class LineLengthAnalyzer(BaseAnalyzer):
-
     def __init__(self, name: str, threshold: int, severity: str, message: str):
         self.name = name
         self.threshold = threshold
@@ -22,12 +21,7 @@ class LineLengthAnalyzer(BaseAnalyzer):
 
         if len(lines) > self.threshold:
             findings.append(
-                Finding(
-                    analyzer=self.name,
-                    severity=self.severity,
-                    file_path=file_path,
-                    message=self.message
-                )
+                Finding(analyzer=self.name, severity=self.severity, file_path=file_path, message=self.message)
             )
 
         return findings

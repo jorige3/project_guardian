@@ -5,8 +5,6 @@ from unittest.mock import patch
 from agent import ProjectGuardian
 from services.config_manager import Config, load_config_file, ConfigurationError
 from services.file_scanner import FileScanner
-from analyzers.line_length import LineLengthAnalyzer
-from analyzers.security_review import SecurityReviewAnalyzer
 
 
 def test_no_config_file_returns_defaults():
@@ -28,10 +26,7 @@ def test_default_config():
 
 def test_partial_custom_config(tmp_path):
     config_file = tmp_path / "guardian.json"
-    data = {
-        "max_workers": 3,
-        "report_path": "reports/custom.md"
-    }
+    data = {"max_workers": 3, "report_path": "reports/custom.md"}
     config_file.write_text(json.dumps(data))
 
     config = load_config_file(config_file)
@@ -50,8 +45,8 @@ def test_full_custom_config(tmp_path):
         "analyzers": {
             "CodeReview": {"enabled": False},
             "ArchitectureReview": {"threshold": 400},
-            "SecurityReview": {"enabled": True}
-        }
+            "SecurityReview": {"enabled": True},
+        },
     }
     config_file.write_text(json.dumps(data))
 
@@ -99,11 +94,7 @@ def test_unknown_keys(tmp_path):
 
 def test_invalid_thresholds(tmp_path):
     config_file = tmp_path / "guardian.json"
-    data = {
-        "analyzers": {
-            "CodeReview": {"threshold": -50}
-        }
-    }
+    data = {"analyzers": {"CodeReview": {"threshold": -50}}}
     config_file.write_text(json.dumps(data))
     with pytest.raises(ConfigurationError, match="Invalid 'threshold' value"):
         load_config_file(config_file)
@@ -118,13 +109,9 @@ def test_invalid_max_workers(tmp_path):
 
 
 def test_di_config_integration(tmp_path):
-    config = Config({
-        "max_workers": 2,
-        "report_path": "reports/di_report.md",
-        "analyzers": {
-            "CodeReview": {"enabled": False}
-        }
-    })
+    config = Config(
+        {"max_workers": 2, "report_path": "reports/di_report.md", "analyzers": {"CodeReview": {"enabled": False}}}
+    )
 
     guardian = ProjectGuardian(project_path=str(tmp_path), config=config)
     assert guardian.max_workers == 2

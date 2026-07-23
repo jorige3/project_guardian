@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock
 from agent import ProjectGuardian
 from analyzers.dependency_review import DependencyReviewAnalyzer
@@ -91,7 +89,7 @@ def test_no_duplicate_dependency_findings(tmp_path):
 
 def test_python_analyzers_never_receive_requirements(tmp_path):
     req_file = tmp_path / "requirements.txt"
-    req_file.write_text("flask\n" * 400) # Long file, would trigger CodeReview if audited
+    req_file.write_text("flask\n" * 400)  # Long file, would trigger CodeReview if audited
 
     # Create mock analyzers representing other reviews
     mock_line_length = MagicMock(spec=LineLengthAnalyzer)
@@ -104,10 +102,7 @@ def test_python_analyzers_never_receive_requirements(tmp_path):
 
     # Use DI to inject these mock analyzers and DependencyReviewAnalyzer
     dep_analyzer = DependencyReviewAnalyzer()
-    guardian = ProjectGuardian(
-        project_path=str(tmp_path),
-        analyzers=[mock_line_length, mock_security, dep_analyzer]
-    )
+    guardian = ProjectGuardian(project_path=str(tmp_path), analyzers=[mock_line_length, mock_security, dep_analyzer])
     guardian.run()
 
     # Assert mock analyzers were never invoked with requirements.txt path
