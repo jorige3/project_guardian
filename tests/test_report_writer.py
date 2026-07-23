@@ -9,20 +9,10 @@ from models.finding import Finding
 def test_successful_report_creation(tmp_path):
     writer = ReportWriter()
     output_file = tmp_path / "subdir" / "audit.md"
-    
+
     findings = [
-        Finding(
-            analyzer="TestAnalyzer",
-            severity="HIGH",
-            file_path="src/file.py",
-            message="Test finding 1"
-        ),
-        Finding(
-            analyzer="TestAnalyzer2",
-            severity="LOW",
-            file_path="src/file2.py",
-            message="Test finding 2"
-        ),
+        Finding(analyzer="TestAnalyzer", severity="HIGH", file_path="src/file.py", message="Test finding 1"),
+        Finding(analyzer="TestAnalyzer2", severity="LOW", file_path="src/file2.py", message="Test finding 2"),
     ]
 
     # Test successful write and nested directory creation
@@ -30,11 +20,7 @@ def test_successful_report_creation(tmp_path):
 
     assert output_file.exists()
     content = output_file.read_text(encoding="utf-8")
-    expected = (
-        "# Project Audit Report\n\n"
-        "- [HIGH] src/file.py: Test finding 1\n"
-        "- [LOW] src/file2.py: Test finding 2\n"
-    )
+    expected = "# Project Audit Report\n\n- [HIGH] src/file.py: Test finding 1\n- [LOW] src/file2.py: Test finding 2\n"
     assert content == expected
 
 

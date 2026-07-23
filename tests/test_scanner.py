@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-import pytest
 
 from services.file_scanner import FileScanner
 
@@ -129,9 +127,7 @@ def test_symbolic_links(tmp_path):
         assert len(files) == 0
     else:
         # Mock is_symlink and exists behavior for broken symlinks
-        with patch.object(Path, "is_symlink", return_value=True), \
-             patch.object(Path, "exists", return_value=False):
-
+        with patch.object(Path, "is_symlink", return_value=True), patch.object(Path, "exists", return_value=False):
             (tmp_path / "broken_link.py").touch()
             scanner = FileScanner(str(tmp_path))
             files = scanner.get_python_files()
@@ -200,9 +196,7 @@ def test_dir_is_symlink_os_error(tmp_path):
     def mock_walk(top, *args, **kwargs):
         yield str(top), ["error_dir"], []
 
-    with patch("os.walk", side_effect=mock_walk), \
-         patch.object(Path, "is_symlink", side_effect=OSError("Read error")):
-
+    with patch("os.walk", side_effect=mock_walk), patch.object(Path, "is_symlink", side_effect=OSError("Read error")):
         scanner = FileScanner(str(tmp_path))
         files = scanner.get_python_files()
         assert len(files) == 0
@@ -212,9 +206,7 @@ def test_file_is_symlink_os_error(tmp_path):
     def mock_walk(top, *args, **kwargs):
         yield str(top), [], ["error_file.py"]
 
-    with patch("os.walk", side_effect=mock_walk), \
-         patch.object(Path, "is_symlink", side_effect=OSError("Read error")):
-
+    with patch("os.walk", side_effect=mock_walk), patch.object(Path, "is_symlink", side_effect=OSError("Read error")):
         scanner = FileScanner(str(tmp_path))
         files = scanner.get_python_files()
         assert len(files) == 0

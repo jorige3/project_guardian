@@ -5,7 +5,6 @@ from models.finding import Finding
 
 
 class SecurityReviewAnalyzer(BaseAnalyzer):
-
     SUSPICIOUS_PATTERNS = [
         "eval(",
         "exec(",
@@ -13,7 +12,7 @@ class SecurityReviewAnalyzer(BaseAnalyzer):
     ]
 
     def analyze(self, file_path, content=None, lines=None, ast_tree=None):
-        
+
         if file_path.endswith("security_review.py"):
             return []
 
@@ -44,7 +43,7 @@ class SecurityReviewAnalyzer(BaseAnalyzer):
                                     analyzer="SecurityReview",
                                     severity="HIGH",
                                     file_path=file_path,
-                                    message=f"Potential security risk: {pattern}"
+                                    message=f"Potential security risk: {pattern}",
                                 )
                             )
                     elif (
@@ -61,11 +60,13 @@ class SecurityReviewAnalyzer(BaseAnalyzer):
                                     analyzer="SecurityReview",
                                     severity="HIGH",
                                     file_path=file_path,
-                                    message=f"Potential security risk: {pattern}"
+                                    message=f"Potential security risk: {pattern}",
                                 )
                             )
         except SyntaxError as e:
-            print(f"Warning: Syntax error parsing {file_path} for AST analysis. Falling back to text-based matching... Detail: {e}")
+            print(
+                f"Warning: Syntax error parsing {file_path} for AST analysis. Falling back to text-based matching... Detail: {e}"
+            )
             for pattern in self.SUSPICIOUS_PATTERNS:
                 if pattern in content:
                     findings.append(
@@ -73,7 +74,7 @@ class SecurityReviewAnalyzer(BaseAnalyzer):
                             analyzer="SecurityReview",
                             severity="HIGH",
                             file_path=file_path,
-                            message=f"Potential security risk: {pattern}"
+                            message=f"Potential security risk: {pattern}",
                         )
                     )
 

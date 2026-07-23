@@ -1,37 +1,32 @@
-# Virtual Environment
-venv/
+# Virtual Environments
 .venv/
+venv/
 
-# Python
+# Python Cache & Bytecode
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Logs
-logs/
-
-# Reports
-reports/*.html
-reports/*.json
-reports/project_audit.md
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment Variables
-.env
-
-temp_test.py
+# Testing & Coverage
 .pytest_cache/
-temp_*.py
-
-
+.ruff_cache/
+.coverage
+htmlcov/
 temp_pytest/
 
-.coverage
+# Build & Packaging
+build/
+dist/
+*.egg-info/
+
+# Logs & Local Configurations
+logs/
+.env
+.DS_Store
+Thumbs.db
+temp_test.py
+temp_*.py
+
+# Keep example reports but ignore local audits
+reports/project_audit.md

@@ -2,16 +2,20 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from services.file_scanner import FileScanner
 from services.report_writer import ReportWriter
-from services.config_manager import load_config_file, Config
+from services.config_manager import load_config_file, ConfigurationError
 from analyzers.security_review import SecurityReviewAnalyzer
 from analyzers.ml_review import MLReviewAnalyzer
 from analyzers.line_length import LineLengthAnalyzer
 from analyzers.dependency_review import DependencyReviewAnalyzer
+import argparse
+import sys
+from services.diagnostics import DiagnosticsChecker
 
 
 class ProjectGuardian:
-
-    def __init__(self, project_path=".", scanner=None, analyzers=None, report_writer=None, max_workers=None, config=None):
+    def __init__(
+        self, project_path=".", scanner=None, analyzers=None, report_writer=None, max_workers=None, config=None
+    ):
         self.project_path = Path(project_path)
 
         # Config loading: priority is injected config -> file loading -> defaults
@@ -27,7 +31,7 @@ class ProjectGuardian:
             self.scanner = FileScanner(
                 str(self.project_path),
                 exclude_dirs=self.config.exclude_dirs,
-                exclude_patterns=self.config.exclude_patterns
+                exclude_patterns=self.config.exclude_patterns,
             )
 
         # Resolve report_writer and report_path
@@ -54,26 +58,32 @@ class ProjectGuardian:
                     continue
 
                 if name == "CodeReview":
-                    self.analyzers.append(LineLengthAnalyzer(
-                        name="CodeReview",
-                        threshold=cfg["threshold"],
-                        severity="LOW",
-                        message="File exceeds 300 lines"
-                    ))
+                    self.analyzers.append(
+                        LineLengthAnalyzer(
+                            name="CodeReview",
+                            threshold=cfg["threshold"],
+                            severity="LOW",
+                            message="File exceeds 300 lines",
+                        )
+                    )
                 elif name == "ArchitectureReview":
-                    self.analyzers.append(LineLengthAnalyzer(
-                        name="ArchitectureReview",
-                        threshold=cfg["threshold"],
-                        severity="MEDIUM",
-                        message="Large file detected (>500 lines)"
-                    ))
+                    self.analyzers.append(
+                        LineLengthAnalyzer(
+                            name="ArchitectureReview",
+                            threshold=cfg["threshold"],
+                            severity="MEDIUM",
+                            message="Large file detected (>500 lines)",
+                        )
+                    )
                 elif name == "PerformanceReview":
-                    self.analyzers.append(LineLengthAnalyzer(
-                        name="PerformanceReview",
-                        threshold=cfg["threshold"],
-                        severity="MEDIUM",
-                        message="Large file may impact maintainability"
-                    ))
+                    self.analyzers.append(
+                        LineLengthAnalyzer(
+                            name="PerformanceReview",
+                            threshold=cfg["threshold"],
+                            severity="MEDIUM",
+                            message="Large file may impact maintainability",
+                        )
+                    )
                 elif name == "SecurityReview":
                     self.analyzers.append(SecurityReviewAnalyzer())
                 elif name == "MLReview":
@@ -146,17 +156,10 @@ class ProjectGuardian:
 
                     if analyzer_signatures.get(analyzer, False):
                         file_findings.extend(
-                            analyzer.analyze(
-                                file_str,
-                                content=content,
-                                lines=lines,
-                                ast_tree=ast_tree
-                            )
+                            analyzer.analyze(file_str, content=content, lines=lines, ast_tree=ast_tree)
                         )
                     else:
-                        file_findings.extend(
-                            analyzer.analyze(file_str)
-                        )
+                        file_findings.extend(analyzer.analyze(file_str))
             except Exception as e:
                 # Log clearly to stderr/stdout without interrupting the rest of the threads
                 print(f"Warning: Worker crashed while scanning {file_str}: {e}")
@@ -185,16 +188,107 @@ class ProjectGuardian:
         return findings
 
 
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Project Guardian: Lightweight, modular static code analysis engine.", add_help=True
+    )
+    parser.add_argument("--version", "-v", action="store_true", help="Show application version and exit.")
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # doctor command
+    subparsers.add_parser("doctor", help="Run system diagnostics checker.")
+
+    # scan command
+    scan_parser = subparsers.add_parser("scan", help="Scan a repository for findings.")
+    scan_parser.add_argument("path", help="Path to the repository to scan.")
+
+    args = parser.parse_args(argv)
+
+    if args.version:
+        import importlib.metadata
+
+        try:
+            app_version = importlib.metadata.version("project-guardian")
+        except Exception:
+            app_version = "1.1.0"
+        print(f"Project Guardian version {app_version}")
+        sys.exit(0)
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    if args.command == "doctor":
+        checker = DiagnosticsChecker()
+        report = checker.run_all()
+        status = report["status"]
+
+        print("Project Guardian Diagnostics Report")
+        print("====================================")
+        print(f"Status: {status.upper()}")
+        print(f"OS: {report['results'].get('os', 'Unknown')}")
+        print(f"Python Version: {report['results'].get('python_version', 'Unknown')}")
+        print(f"App Version: {report['results'].get('app_version', 'Unknown')}")
+        print(f"Package Metadata: {'OK' if report['results'].get('package_metadata_ok', False) else 'FALLBACK'}")
+        print(f"Analyzer Modules: {'OK' if report['results'].get('analyzers_ok', False) else 'FAILED'}")
+        print(f"Config Loading: {'OK' if report['results'].get('config_ok', False) else 'FAILED'}")
+        print(f"Temp File Creation/Cleanup: {'OK' if report['results'].get('temp_file_ok', False) else 'FAILED'}")
+        print(
+            f"Report Directory Writability: {'OK' if report['results'].get('report_dir_writability_ok', False) else 'FAILED'}"
+        )
+        print(f"Git Executable: {'OK' if report['results'].get('git_ok', False) else 'WARNING'}")
+        print(f"Dependencies: {'OK' if report['results'].get('dependencies_ok', False) else 'FAILED'}")
+
+        if report["warnings"]:
+            print("\nWarnings:")
+            for warning in report["warnings"]:
+                print(f"  - {warning}")
+
+        if report["errors"]:
+            print("\nErrors:")
+            for error in report["errors"]:
+                print(f"  - {error}")
+
+        if status == "failed":
+            sys.exit(1)
+        else:
+            sys.exit(0)
+
+    elif args.command == "scan":
+        target_path = Path(args.path)
+        if not target_path.exists():
+            print(f"Error: Path '{target_path}' does not exist.", file=sys.stderr)
+            sys.exit(2)
+        if not target_path.is_dir():
+            print(f"Error: Path '{target_path}' is not a directory.", file=sys.stderr)
+            sys.exit(2)
+
+        try:
+            guardian = ProjectGuardian(project_path=target_path)
+            results = guardian.run()
+
+            print(f"Findings: {len(results)}")
+            for finding in results:
+                print(finding)
+
+            report_path = Path(guardian.report_path)
+            if not report_path.is_absolute():
+                report_path = target_path / report_path
+
+            guardian.report_writer.write(results, str(report_path))
+            print(f"Report generated: {report_path}")
+            sys.exit(0)
+        except ConfigurationError as e:
+            print(f"Configuration Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+
 if __name__ == "__main__":
-
-    guardian = ProjectGuardian()
-
-    results = guardian.run()
-
-    print(f"Findings: {len(results)}")
-
-    for finding in results:
-        print(finding)
-
-    guardian.report_writer.write(results, guardian.report_path)
-    print(f"Report generated: {guardian.report_path}")
+    main()

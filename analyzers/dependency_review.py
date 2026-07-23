@@ -11,12 +11,9 @@ class DependencyReviewAnalyzer(BaseAnalyzer):
         findings = []
 
         if Path(file_path).name == "requirements.txt":
-
             if content is None:
                 try:
-                    content = Path(file_path).read_text(
-                        encoding="utf-8"
-                    )
+                    content = Path(file_path).read_text(encoding="utf-8")
                 except OSError:
                     return []
 
@@ -26,7 +23,7 @@ class DependencyReviewAnalyzer(BaseAnalyzer):
                         analyzer=self.name,
                         severity="LOW",
                         file_path=str(file_path),
-                        message="Dependencies are not pinned"
+                        message="Dependencies are not pinned",
                     )
                 )
 

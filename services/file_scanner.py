@@ -4,15 +4,20 @@ from pathlib import Path
 
 
 class FileScanner:
-
     def __init__(self, root_path: str, exclude_dirs=None, exclude_patterns=None):
         self.root_path = Path(root_path)
         if exclude_dirs is not None:
             self.exclude_dirs = set(exclude_dirs)
         else:
             self.exclude_dirs = {
-                "venv", ".venv", "tests", "__pycache__",
-                ".git", ".pytest_cache", "temp_pytest", "node_modules"
+                "venv",
+                ".venv",
+                "tests",
+                "__pycache__",
+                ".git",
+                ".pytest_cache",
+                "temp_pytest",
+                "node_modules",
             }
         if exclude_patterns is not None:
             self.exclude_patterns = list(exclude_patterns)

@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from agent import ProjectGuardian
 from services.file_scanner import FileScanner
@@ -8,7 +7,6 @@ from models.finding import Finding
 
 
 class FakeScanner:
-
     def __init__(self, files):
         self.files = files
 
@@ -17,7 +15,6 @@ class FakeScanner:
 
 
 class FakeAnalyzer(BaseAnalyzer):
-
     def __init__(self, name, findings):
         self.name = name
         self.findings = findings
@@ -29,7 +26,6 @@ class FakeAnalyzer(BaseAnalyzer):
 
 
 class FakeReportWriter:
-
     def __init__(self):
         self.written_findings = None
         self.written_path = None
@@ -64,21 +60,11 @@ def test_inject_fake_scanner():
 
 def test_inject_fake_analyzer():
     fake_scanner = FakeScanner(["target.py"])
-    fake_findings = [
-        Finding(
-            analyzer="Fake",
-            severity="HIGH",
-            file_path="target.py",
-            message="Test"
-        )
-    ]
+    fake_findings = [Finding(analyzer="Fake", severity="HIGH", file_path="target.py", message="Test")]
     fake_analyzer = FakeAnalyzer("Fake", fake_findings)
 
     # Inject fake scanner and fake analyzer
-    guardian = ProjectGuardian(
-        scanner=fake_scanner,
-        analyzers=[fake_analyzer]
-    )
+    guardian = ProjectGuardian(scanner=fake_scanner, analyzers=[fake_analyzer])
     findings = guardian.run()
 
     assert findings == fake_findings
@@ -105,7 +91,6 @@ def test_analyzer_execution_order():
     execution_log = []
 
     class LoggingAnalyzer(BaseAnalyzer):
-
         def __init__(self, label):
             self.label = label
 
@@ -117,10 +102,7 @@ def test_analyzer_execution_order():
     analyzer2 = LoggingAnalyzer("second")
     analyzer3 = LoggingAnalyzer("third")
 
-    guardian = ProjectGuardian(
-        scanner=fake_scanner,
-        analyzers=[analyzer1, analyzer2, analyzer3]
-    )
+    guardian = ProjectGuardian(scanner=fake_scanner, analyzers=[analyzer1, analyzer2, analyzer3])
     guardian.run()
 
     # Verify execution order is exactly as supplied: analyzer1, then analyzer2, then analyzer3
@@ -140,7 +122,7 @@ def test_run_with_valid_file(tmp_path):
 
 def test_run_with_invalid_file(tmp_path):
     test_file = tmp_path / "invalid_code.py"
-    test_file.write_text("if True x = 1\n") # SyntaxError
+    test_file.write_text("if True x = 1\n")  # SyntaxError
 
     fake_scanner = FakeScanner([str(test_file)])
     guardian = ProjectGuardian(scanner=fake_scanner)
@@ -154,10 +136,7 @@ def test_analyzer_signature_inspection_error():
 
     # Mock inspect.signature to raise ValueError
     with patch("inspect.signature", side_effect=ValueError("Invalid signature")):
-        guardian = ProjectGuardian(
-            scanner=fake_scanner,
-            analyzers=[bad_analyzer]
-        )
+        guardian = ProjectGuardian(scanner=fake_scanner, analyzers=[bad_analyzer])
         findings = guardian.run()
     assert len(findings) == 0
 
@@ -181,10 +160,10 @@ def test_parallel_concurrency_config():
 def test_parallel_identical_findings(tmp_path):
     # Setup some python files with line length warnings
     file1 = tmp_path / "a.py"
-    file1.write_text("x = 1\n" * 350) # triggers LineLength > 300
+    file1.write_text("x = 1\n" * 350)  # triggers LineLength > 300
 
     file2 = tmp_path / "b.py"
-    file2.write_text("y = 2\n" * 550) # triggers LineLength > 500
+    file2.write_text("y = 2\n" * 550)  # triggers LineLength > 500
 
     fake_scanner = FakeScanner([str(file1), str(file2)])
 
@@ -219,7 +198,7 @@ def test_parallel_deterministic_ordering(tmp_path):
     findings = g_par.run()
 
     # Assert findings are ordered alphabetically by file path
-    assert len(findings) == 4 # 2 findings per file (CodeReview and PerformanceReview)
+    assert len(findings) == 4  # 2 findings per file (CodeReview and PerformanceReview)
     assert findings[0].file_path == str(file_a)
     assert findings[1].file_path == str(file_a)
     assert findings[2].file_path == str(file_c)
@@ -245,11 +224,7 @@ def test_parallel_worker_exception_isolation(tmp_path):
     crashing_analyzer = CrashingAnalyzer()
 
     # Run parallel
-    guardian = ProjectGuardian(
-        scanner=fake_scanner,
-        analyzers=[crashing_analyzer],
-        max_workers=2
-    )
+    guardian = ProjectGuardian(scanner=fake_scanner, analyzers=[crashing_analyzer], max_workers=2)
 
     # The scan should NOT terminate with exception
     findings = guardian.run()

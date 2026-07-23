@@ -5,7 +5,6 @@ from models.finding import Finding
 
 
 class MLReviewAnalyzer(BaseAnalyzer):
-
     def analyze(self, file_path, content=None, lines=None, ast_tree=None):
 
         findings = []
@@ -49,19 +48,21 @@ class MLReviewAnalyzer(BaseAnalyzer):
                         analyzer="MLReview",
                         severity="MEDIUM",
                         file_path=file_path,
-                        message="train_test_split not detected"
+                        message="train_test_split not detected",
                     )
                 )
 
         except SyntaxError as e:
-            print(f"Warning: Syntax error parsing {file_path} for AST analysis. Falling back to text-based matching... Detail: {e}")
+            print(
+                f"Warning: Syntax error parsing {file_path} for AST analysis. Falling back to text-based matching... Detail: {e}"
+            )
             if "train_test_split(" not in content and "sklearn" in content:
                 findings.append(
                     Finding(
                         analyzer="MLReview",
                         severity="MEDIUM",
                         file_path=file_path,
-                        message="train_test_split not detected"
+                        message="train_test_split not detected",
                     )
                 )
 

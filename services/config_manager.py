@@ -1,14 +1,10 @@
 import json
 from pathlib import Path
 
-from analyzers.security_review import SecurityReviewAnalyzer
-from analyzers.ml_review import MLReviewAnalyzer
-from analyzers.line_length import LineLengthAnalyzer
-from analyzers.dependency_review import DependencyReviewAnalyzer
-
 
 class ConfigurationError(ValueError):
     """Exception raised when configuration is malformed or invalid."""
+
     pass
 
 
@@ -16,8 +12,14 @@ class Config:
     # Documented Defaults
     DEFAULT_MAX_WORKERS = 1
     DEFAULT_EXCLUDE_DIRS = {
-        "venv", ".venv", "tests", "__pycache__",
-        ".git", ".pytest_cache", "temp_pytest", "node_modules"
+        "venv",
+        ".venv",
+        "tests",
+        "__pycache__",
+        ".git",
+        ".pytest_cache",
+        "temp_pytest",
+        "node_modules",
     }
     DEFAULT_EXCLUDE_PATTERNS = ["temp_*"]
     DEFAULT_REPORT_PATH = "reports/project_audit.md"
@@ -27,7 +29,7 @@ class Config:
         "PerformanceReview": {"enabled": True, "threshold": 300},
         "SecurityReview": {"enabled": True},
         "MLReview": {"enabled": True},
-        "DependencyReview": {"enabled": True}
+        "DependencyReview": {"enabled": True},
     }
 
     def __init__(self, data=None):
@@ -100,12 +102,16 @@ class Config:
                     known_analyzer_keys = {"enabled", "threshold"}
                     unknown_analyzer_keys = set(overrides.keys()) - known_analyzer_keys
                     if unknown_analyzer_keys:
-                        raise ConfigurationError(f"Unknown setting for analyzer '{name}': {', '.join(unknown_analyzer_keys)}")
+                        raise ConfigurationError(
+                            f"Unknown setting for analyzer '{name}': {', '.join(unknown_analyzer_keys)}"
+                        )
 
                     if "enabled" in overrides:
                         enabled = overrides["enabled"]
                         if not isinstance(enabled, bool):
-                            raise ConfigurationError(f"Invalid 'enabled' value for analyzer '{name}': {enabled}. Must be a boolean.")
+                            raise ConfigurationError(
+                                f"Invalid 'enabled' value for analyzer '{name}': {enabled}. Must be a boolean."
+                            )
                         cfg["enabled"] = enabled
 
                     if "threshold" in overrides:
@@ -113,7 +119,9 @@ class Config:
                             raise ConfigurationError(f"Analyzer '{name}' does not support a threshold setting.")
                         threshold = overrides["threshold"]
                         if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold <= 0:
-                            raise ConfigurationError(f"Invalid 'threshold' value for analyzer '{name}': {threshold}. Must be a positive integer.")
+                            raise ConfigurationError(
+                                f"Invalid 'threshold' value for analyzer '{name}': {threshold}. Must be a positive integer."
+                            )
                         cfg["threshold"] = threshold
 
                 self.analyzers[name] = cfg
